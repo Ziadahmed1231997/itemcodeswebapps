@@ -1,0 +1,2225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSI Attribute Portal</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- SheetJS CDN for Excel file handling -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e0e0e0;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #9ca3af; /* Gray-400 */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* Gray-500 */
+        }
+        
+        .max-h-96-overflow {
+            max-height: 24rem; /* 384px */
+            overflow-y: auto;
+        }
+        .disabled-section {
+            opacity: 0.5;
+            pointer-events: none;
+            user-select: none;
+        }
+        .review-section {
+            border-top: 1px dashed #e5e7eb;
+            margin-top: 1rem;
+            padding-top: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-8">
+
+    <!-- Main Container -->
+    <div class="container mx-auto p-6 bg-white rounded-lg shadow-xl">
+        <h1 class="text-4xl font-bold text-center mb-6 text-gray-800">CSI Attribute Creation Portal</h1>
+
+        <!-- Top Section: CSI Hierarchy and Additional Levels -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <!-- CSI Hierarchy Input -->
+            <div class="bg-gray-50 p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-700">CSI Hierarchy Input</h2>
+                <div class="space-y-4">
+                    <!-- File input for hierarchy -->
+                    <div>
+                        <label for="hierarchy-file-input-inline" class="block text-sm font-medium text-gray-700">Import CSI Hierarchy (.xlsx)</label>
+                        <input type="file" id="hierarchy-file-input-inline" accept=".xlsx" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"/>
+                    </div>
+                    <div class="pt-2">
+                        <button id="download-template-btn" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Download Template</button>
+                    </div>
+                    <div>
+                        <label for="division-select" class="block text-sm font-medium text-gray-700">CSI Division</label>
+                        <select id="division-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                            <option value="">Select Division</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="section-select" class="block text-sm font-medium text-gray-700">CSI Section</label>
+                        <select id="section-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                            <option value="">Select Section</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="subsection-select" class="block text-sm font-medium text-gray-700">CSI Detailed Section</label>
+                        <select id="subsection-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                            <option value="">Select Detailed Section</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="item-select" class="block text-sm font-medium text-gray-700">CSI Item</label>
+                        <select id="item-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                            <option value="">Select Item</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Levels Management -->
+            <div id="additional-levels-section" class="bg-gray-50 p-6 rounded-lg shadow-md disabled-section relative">
+                 <div id="disabled-overlay" class="absolute inset-0 bg-gray-50 bg-opacity-75 flex items-center justify-center rounded-lg">
+                    <p class="text-gray-600 font-medium text-center p-4">Please complete the CSI Hierarchy selection to enable.</p>
+                </div>
+                <h2 class="text-2xl font-semibold mb-4 text-gray-700">Additional Levels</h2>
+                <div class="space-y-4">
+                    <!-- A) Removed the form and replaced with a single button -->
+                    <div class="flex flex-col space-y-2">
+                        <div class="flex space-x-2 items-end">
+                            <button id="add-new-level-btn" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                Add New Level
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Added Levels Display -->
+                    <div id="additional-levels-container" class="space-y-2 max-h-96-overflow">
+                        <p class="text-gray-500 text-center">No additional levels defined.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Additional Levels Select -->
+        <div id="additional-level-select-container" class="bg-gray-50 p-6 rounded-lg shadow-md mb-8 hidden">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-700">Additional Level Selector</h2>
+            <div id="dynamic-additional-levels" class="space-y-4">
+                <!-- Additional Level dropdowns will be rendered here -->
+            </div>
+        </div>
+
+        <!-- Attribute Creation Section -->
+        <div class="bg-gray-50 p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-700">Create Attributes</h2>
+            <div id="current-csi-path" class="text-sm font-medium text-gray-600 mb-4">
+                <span class="text-gray-400">Please select a full CSI hierarchy path.</span>
+            </div>
+            <div class="space-y-4">
+                <div class="flex-grow">
+                    <label for="attribute-name-input" class="block text-sm font-medium text-gray-700">Attribute Name</label>
+                    <input type="text" id="attribute-name-input" class="mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm" placeholder="e.g., Color">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Standard Values</label>
+                    <div id="attribute-standard-values-container" class="space-y-2">
+                        <!-- Value inputs will be dynamically added here -->
+                        <div class="flex space-x-2 items-center">
+                            <input type="text" class="attribute-value-name-input mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm" placeholder="Value 1 Name">
+                            <input type="text" list="unit-options" class="attribute-value-unit-input mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm" placeholder="Value 1 Unit (optional)">
+                        </div>
+                    </div>
+                    <button id="add-attribute-value-btn" class="mt-2 px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300">Add Value</button>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <label for="mandatory-checkbox" class="inline-flex items-center">
+                        <input type="checkbox" id="mandatory-checkbox" class="form-checkbox h-5 w-5 text-indigo-600 rounded">
+                        <span class="ml-2 text-sm text-gray-700">Mandatory</span>
+                    </label>
+                    <button id="add-attribute-btn" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Add Attribute</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Collected Attributes Display -->
+        <div class="bg-gray-50 p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-700">Collected Attributes</h2>
+            <div id="collected-data-container" class="max-h-96-overflow">
+                <!-- Attributes will be dynamically added here -->
+                <p id="collected-data-placeholder" class="text-gray-500 text-center">No attributes collected yet. Start adding some!</p>
+            </div>
+            <!-- A) Added Reference PO(s) input -->
+            <div id="reference-po-block" class="mt-4">
+                <label for="reference-po-input" class="block text-sm font-medium text-gray-700">
+                    Reference PO(s) <span class="text-red-600">*</span>
+                </label>
+                <input
+                    type="text"
+                    id="reference-po-input"
+                    required
+                    placeholder="Enter reference PO(s) used for attribute creation"
+                    class="mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                />
+                <p class="text-xs text-gray-500 mt-1">Example: PO-12345, PO-12346</p>
+            </div>
+            <div class="flex mt-4 space-x-2">
+                <button id="export-btn" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">Export Attributes</button>
+                <button id="import-reviewed-btn" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Import Reviewed Attributes</button>
+                <button id="clear-all-btn" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">Clear All</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modals -->
+
+    <!-- Message Box Modal -->
+    <div id="message-box-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <h3 id="message-box-title" class="text-lg leading-6 font-medium text-gray-900">Message</h3>
+                <div class="mt-2 px-7 py-3">
+                    <p id="message-box-text" class="text-sm text-gray-500">This is a message.</p>
+                </div>
+                <div class="items-center px-4 py-3">
+                    <button id="message-box-ok-btn" class="px-4 py-2 bg-indigo-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modify Attribute Modal -->
+    <div id="modify-attribute-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-left">
+                <h3 class="text-2xl font-semibold text-gray-900 mb-4">Modify Attribute</h3>
+                <div class="space-y-4">
+                    <!-- CSI Hierarchy Modification -->
+                    <div class="bg-gray-100 p-4 rounded-md">
+                         <h4 class="text-lg font-medium text-gray-800 mb-2">CSI Hierarchy</h4>
+                         <div class="space-y-2">
+                            <div>
+                                <label for="modify-division-select" class="block text-sm font-medium text-gray-700">CSI Division</label>
+                                <select id="modify-division-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                                    <option value="">Select Division</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="modify-section-select" class="block text-sm font-medium text-gray-700">CSI Section</label>
+                                <select id="modify-section-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                                    <option value="">Select Section</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="modify-subsection-select" class="block text-sm font-medium text-gray-700">CSI Detailed Section</label>
+                                <select id="modify-subsection-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                                    <option value="">Select Detailed Section</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="modify-item-select" class="block text-sm font-medium text-gray-700">CSI Item</label>
+                                <select id="modify-item-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                                    <option value="">Select Item</option>
+                                </select>
+                            </div>
+                         </div>
+                         <!-- Additional Level dropdowns will be rendered here dynamically -->
+                         <div id="modify-dynamic-additional-levels" class="space-y-2 mt-4"></div>
+                    </div>
+                    <!-- Attribute Details Modification -->
+                    <div>
+                        <div class="flex-grow">
+                            <label for="modify-attribute-name" class="block text-sm font-medium text-gray-700">Attribute Name</label>
+                            <input type="text" id="modify-attribute-name" class="mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Standard Values</label>
+                        <div id="modify-attribute-values-container" class="space-y-2">
+                             <!-- Value inputs will be dynamically added here -->
+                        </div>
+                        <button id="modify-add-attribute-value-btn" class="mt-2 px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300">Add Value</button>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="modify-mandatory-checkbox" class="form-checkbox h-5 w-5 text-indigo-600 rounded">
+                        <label for="modify-mandatory-checkbox" class="ml-2 text-sm text-gray-700">Mandatory</label>
+                    </div>
+
+                    <!-- NEW: Fields for Parent Attribute and Level -->
+                    <div class="space-y-4 pt-4 border-t border-gray-200">
+                        <h4 class="text-lg font-medium text-gray-800 mb-2">Parent Attribute Details (Optional)</h4>
+                        <div>
+                            <label for="modify-parent-attribute-name" class="block text-sm font-medium text-gray-700">Parent Attribute Name</label>
+                            <input type="text" id="modify-parent-attribute-name" class="mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm">
+                        </div>
+                         <div>
+                            <label for="modify-parent-standard-values" class="block text-sm font-medium text-gray-700">Parent Standard Values (Raw)</label>
+                            <textarea id="modify-parent-standard-values" rows="2" class="mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm"></textarea>
+                        </div>
+                        <div>
+                            <label for="modify-attribute-level" class="block text-sm font-medium text-gray-700">Attribute Level</label>
+                            <input type="text" id="modify-attribute-level" class="mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm">
+                        </div>
+                    </div>
+
+                    <!-- NEW: Fields for Reviewer Data and Comments -->
+                    <div class="space-y-4 pt-4 border-t border-gray-200">
+                        <h4 class="text-lg font-medium text-gray-800 mb-2">Reviewer Details (Optional)</h4>
+                        <div>
+                             <label for="modify-reviewers" class="block text-sm font-medium text-gray-700">Reviewer(s)</label>
+                             <div id="modify-reviewers-list" class="mt-1 p-2 bg-gray-100 rounded-md">
+                                 <!-- Reviewer list rendered here -->
+                             </div>
+                             <button id="manage-reviewers-btn" class="mt-2 px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300">Manage Reviewers</button>
+                        </div>
+                        <div>
+                             <label for="modify-overall-review-comment" class="block text-sm font-medium text-gray-700">Overall Review Comment</label>
+                             <textarea id="modify-overall-review-comment" rows="3" class="mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="items-center px-4 py-3 flex justify-end space-x-2 mt-4">
+                    <button id="save-attribute-changes-btn" class="px-4 py-2 bg-emerald-600 text-white text-base font-medium rounded-md shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">Save Changes</button>
+                    <button id="cancel-attribute-changes-btn" class="px-4 py-2 bg-white text-gray-700 border border-gray-300 text-base font-medium rounded-md shadow-sm hover:bg-gray-50 focus:outline-none">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nested Manage Reviewers Modal -->
+    <div id="manage-reviewers-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-left">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">Manage Reviewers</h3>
+                <div id="reviewer-inputs-container" class="space-y-3">
+                    <!-- Reviewer rows will be added here -->
+                </div>
+                <div class="flex items-center space-x-2 mt-4">
+                    <button id="add-reviewer-btn" class="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300">Add Reviewer</button>
+                    <button id="close-manage-reviewers-btn" class="px-3 py-1 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Options Modal -->
+    <div id="export-options-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Export Options</h3>
+                <div class="mt-2 px-7 py-3 text-left space-y-4">
+                    <!-- Radio Button for all collected data -->
+                    <div class="flex items-center">
+                        <input id="export-all-radio" name="export-option" type="radio" checked class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300">
+                        <label for="export-all-radio" class="ml-3 block text-sm font-medium text-gray-700">
+                            Export all collected data
+                        </label>
+                    </div>
+                    <!-- Radio Button for chosen item -->
+                    <div class="flex items-center">
+                        <input id="export-chosen-radio" name="export-option" type="radio" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300">
+                        <label for="export-chosen-radio" class="ml-3 block text-sm font-medium text-gray-700">
+                            Export attributes for the currently chosen item
+                        </label>
+                    </div>
+                    <!-- Additional level selects for chosen item export -->
+                    <div id="export-chosen-options" class="pl-6 space-y-2 hidden">
+                        <!-- Additional level dropdowns will be rendered here dynamically -->
+                    </div>
+                </div>
+                <div class="items-center px-4 py-3 flex justify-end space-x-2">
+                    <button id="perform-export-btn" class="px-4 py-2 bg-green-600 text-white text-base font-medium rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">Export</button>
+                    <button id="cancel-export-btn" class="px-4 py-2 bg-white text-gray-700 border border-gray-300 text-base font-medium rounded-md shadow-sm hover:bg-gray-50 focus:outline-none">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <datalist id="unit-options"></datalist>
+
+    <script>
+        // Use DOMContentLoaded to ensure all elements are loaded before running the script
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // =========================================================
+            //  Variable Declarations & Initial Setup
+            // =========================================================
+
+            let csiHierarchy = {};
+            let collectedData = [];
+            let additionalLevels = [];
+            let currentlyModifyingAttribute = null;
+            let extraLevelValues = []; // strings, e.g., ["Domestic Pipes","Fire Pipes","Drainage Pipes"]
+            let currentExtraLevelValue = ""; // reflects currently selected Extra Level Value (single unnamed level)
+            let currentReviewers = []; // For the nested modal
+
+            const UNIT_CHOICES = [
+                "", "—", "%",
+
+                // Length
+                "mm","cm","m","km","in","ft","yd",
+
+                // Area
+                "mm2","mm²","cm²","m²","km²","in²","ft²","yd²","acre","ha",
+
+                // Volume
+                "mm³","cm³","m³","L","mL","gal","US gal","UK gal","ft³","in³",
+
+                // Mass
+                "mg","g","kg","ton","lb","oz",
+
+                // Force / Load
+                "N","kN","MN","lbf",
+
+                // Pressure / Stress
+                "Pa","kPa","MPa","GPa","bar","mbar","psi","psf",
+
+                // Density / Concentration
+                "kg/m³","g/cm³","g/L","mg/L","ppm","ppb",
+
+                // Temperature
+                "°C","°F","K",
+
+                // Time / Rate
+                "s","min","h","day","week","month","year","Hz","rpm",
+
+                // Speed / Flow
+                "m/s","km/h","ft/s","m³/s","m³/h","L/s","L/min","L/h",
+
+                // Energy / Power / Heat
+                "J","kJ","MJ","Wh","kWh","MWh","BTU","BTU/h","kcal","kcal/h",
+
+                // Electrical
+                "V","kV","A","mA","W","kW","MW","VA","kVA","VAr","kVAr","Ω","kΩ","MΩ",
+
+                // Thermal / Transmission
+                "W/m·K","W/m²·K","kJ/kg·K",
+
+                // Torque / Line load
+                "N·m","kN·m","N/mm","kN/m",
+
+                // Light / Sound
+                "lm","lx","cd","dB",
+
+                // Per-area/per-mass application
+                "g/m²","kg/m²","m²/L","m²/kg",
+
+                // Misc. counting / packaging
+                "pcs","set","pair","roll","sheet","bag","box","bundle"
+            ];
+
+
+            // Main UI elements
+            const hierarchyFileInput = document.getElementById('hierarchy-file-input-inline');
+            const downloadTemplateBtn = document.getElementById('download-template-btn');
+            const divisionSelect = document.getElementById('division-select');
+            const sectionSelect = document.getElementById('section-select');
+            const subsectionSelect = document.getElementById('subsection-select');
+            const itemSelect = document.getElementById('item-select');
+
+            const additionalLevelsSection = document.getElementById('additional-levels-section');
+            const disabledOverlay = document.getElementById('disabled-overlay');
+            const addNewLevelBtn = document.getElementById('add-new-level-btn');
+            
+            const additionalLevelsContainer = document.getElementById('additional-levels-container');
+            const dynamicAdditionalLevelsContainer = document.getElementById('dynamic-additional-levels');
+            const additionalLevelSelectContainer = document.getElementById('additional-level-select-container');
+
+            const currentCSIPath = document.getElementById('current-csi-path');
+            const attributeNameInput = document.getElementById('attribute-name-input');
+            const attributeStandardValuesContainer = document.getElementById('attribute-standard-values-container');
+            const addAttributeValueBtn = document.getElementById('add-attribute-value-btn');
+            const mandatoryCheckbox = document.getElementById('mandatory-checkbox');
+            const addAttributeBtn = document.getElementById('add-attribute-btn');
+
+            const collectedDataContainer = document.getElementById('collected-data-container');
+            const collectedDataPlaceholder = document.getElementById('collected-data-placeholder');
+            const referencePOInput = document.getElementById('reference-po-input');
+            const exportBtn = document.getElementById('export-btn');
+            const importReviewedBtn = document.getElementById('import-reviewed-btn'); // NEW BUTTON
+            const clearAllBtn = document.getElementById('clear-all-btn');
+
+            // Modal elements
+            const messageBoxModal = document.getElementById('message-box-modal');
+            const messageBoxTitle = document.getElementById('message-box-title');
+            const messageBoxText = document.getElementById('message-box-text');
+            const messageBoxOkBtn = document.getElementById('message-box-ok-btn');
+            
+            const exportOptionsModal = document.getElementById('export-options-modal');
+            const exportAllRadio = document.getElementById('export-all-radio');
+            const exportChosenRadio = document.getElementById('export-chosen-radio');
+            const exportChosenOptionsContainer = document.getElementById('export-chosen-options');
+            const performExportBtn = document.getElementById('perform-export-btn');
+            const cancelExportBtn = document.getElementById('cancel-export-btn');
+            
+            // New Modify Attribute Modal Elements
+            const modifyAttributeModal = document.getElementById('modify-attribute-modal');
+            // CSI Hierarchy selects inside modal
+            const modifyDivisionSelect = document.getElementById('modify-division-select');
+            const modifySectionSelect = document.getElementById('modify-section-select');
+            const modifySubsectionSelect = document.getElementById('modify-subsection-select');
+            const modifyItemSelect = document.getElementById('modify-item-select');
+            const modifyDynamicAdditionalLevelsContainer = document.getElementById('modify-dynamic-additional-levels');
+            // Attribute details
+            const modifyAttributeName = document.getElementById('modify-attribute-name');
+            const modifyAttributeValuesContainer = document.getElementById('modify-attribute-values-container');
+            const modifyAddAttributeValueBtn = document.getElementById('modify-add-attribute-value-btn');
+            const modifyMandatoryCheckbox = document.getElementById('modify-mandatory-checkbox');
+            const modifyParentAttributeName = document.getElementById('modify-parent-attribute-name');
+            const modifyParentStandardValues = document.getElementById('modify-parent-standard-values');
+            const modifyAttributeLevel = document.getElementById('modify-attribute-level');
+            const modifyReviewersList = document.getElementById('modify-reviewers-list');
+            const manageReviewersBtn = document.getElementById('manage-reviewers-btn');
+            const modifyOverallReviewComment = document.getElementById('modify-overall-review-comment');
+            const saveAttributeChangesBtn = document.getElementById('save-attribute-changes-btn');
+            const cancelAttributeChangesBtn = document.getElementById('cancel-attribute-changes-btn');
+
+            // Nested Manage Reviewers Modal elements
+            const manageReviewersModal = document.getElementById('manage-reviewers-modal');
+            const reviewerInputsContainer = document.getElementById('reviewer-inputs-container');
+            const addReviewerBtn = document.getElementById('add-reviewer-btn');
+            const closeManageReviewersBtn = document.getElementById('close-manage-reviewers-btn');
+
+
+            // =========================================================
+            //  Helper Functions
+            // =========================================================
+
+            function showModal(modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex', 'items-center', 'justify-center');
+            }
+
+            function hideModal(modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex', 'items-center', 'justify-center');
+            }
+
+            function showMessageBox(message, isError = false) {
+                messageBoxText.textContent = message;
+                messageBoxTitle.textContent = isError ? 'Error' : 'Success';
+                messageBoxTitle.classList.toggle('text-red-600', isError);
+                messageBoxTitle.classList.toggle('text-gray-900', !isError);
+                showModal(messageBoxModal);
+            }
+
+            function clearSelect(selectElement, defaultText) {
+                selectElement.innerHTML = `<option value="">${defaultText}</option>`;
+                selectElement.disabled = true;
+            }
+
+            function populateSelect(selectElement, data, placeholder) {
+                clearSelect(selectElement, placeholder);
+                selectElement.disabled = false;
+                for (const value in data) {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    selectElement.appendChild(option);
+                }
+            }
+            
+            function renderCurrentPath() {
+                const { division, section, subsection, item, additionalLevel } = getSelectedPath(divisionSelect, sectionSelect, subsectionSelect, itemSelect, dynamicAdditionalLevelsContainer);
+                if (division && section && subsection && item) {
+                    let path = [division, section, subsection, item];
+                    if (additionalLevel) {
+                        path.push(additionalLevel.value);
+                    }
+                    currentCSIPath.innerHTML = `<span class="font-bold text-gray-800">Current Path:</span> ${path.join(' > ')}`;
+                } else {
+                    currentCSIPath.innerHTML = `<span class="text-gray-400">Please select a full CSI hierarchy path.</span>`;
+                }
+            }
+
+            function getSelectedPath(divSelect, secSelect, subSecSelect, itemSel, addLevelContainer) {
+              const division = divSelect.value;
+              const section = secSelect.value;
+              const subsection = subSecSelect.value;
+              const item = itemSel.value;
+
+              let val = (currentExtraLevelValue || "").trim();
+              if (!val) {
+                const normalSel = document.getElementById('extra-level-select');
+                const modifySel = document.getElementById('modify-extra-level-select');
+                val = (modifySel?.value ?? normalSel?.value ?? '').trim();
+              }
+
+              const additionalLevel = val ? { value: val } : null;
+              return { division, section, subsection, item, additionalLevel };
+            }
+
+            function clearAttributeFields() {
+                attributeNameInput.value = '';
+                mandatoryCheckbox.checked = false;
+                attributeStandardValuesContainer.innerHTML = `
+                    <div class="flex space-x-2 items-center">
+                        <input type="text" class="attribute-value-name-input mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm" placeholder="Value 1 Name">
+                        <input type="text" list="unit-options" class="attribute-value-unit-input mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm" placeholder="Value 1 Unit (optional)">
+                    </div>
+                `;
+            }
+
+            function updateUIForCSIHierarchy() {
+                const byId = (id) => document.getElementById(id);
+  const divisionSelect   = byId('division-select');
+  const sectionSelect    = byId('section-select');
+  const subsectionSelect = byId('subsection-select');
+  const itemSelect       = byId('item-select');
+
+  const reset = (sel, ph) => {
+    if (!sel) return;
+    sel.innerHTML = '';
+    const o = document.createElement('option');
+    o.value = '';
+    o.textContent = ph || 'Select.';
+    sel.appendChild(o);
+    sel.disabled = false; // keep enabled
+  };
+  const fill = (sel, arr) => (arr || []).forEach(v => {
+    const o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o);
+  });
+  const sortedKeys = (obj) => Object.keys(obj || {}).sort((a,b)=>a.localeCompare(b, undefined, {numeric:true}));
+
+  // Reset all
+  reset(divisionSelect,   'Select Division…');
+  reset(sectionSelect,    'Select Section…');
+  reset(subsectionSelect, 'Select Detailed Section…');
+  reset(itemSelect,       'Select Item…');
+
+  // Populate divisions from the current tree (useful when not using flat cascades)
+  const divKeys = sortedKeys(window.csiHierarchy);
+  fill(divisionSelect, divKeys);
+
+  // IMPORTANT: do not attach legacy listeners when using flat cascades
+};
+
+            
+               function generateHierarchyTree(data) {
+    
+    const tree = {};
+  const nb = /\u00A0/g;
+  const norm = (s) => String(s ?? '').replace(nb, ' ').replace(/\s+/g, ' ').trim();
+
+  (rows || []).forEach(r => {
+    const d = `${norm(r['CSI Division Code'])} - ${norm(r['CSI Division Description'])}`;
+    const s = `${norm(r['CSI Section Code'])} - ${norm(r['CSI Section Description'])}`;
+    const u = `${norm(r['CSI Detailed Section Code'])} - ${norm(r['CSI Detailed Section Description'])}`;
+    const i = `${norm(r['CSI Item Code'])} - ${norm(r['CSI Item Description'])}`;
+
+    tree[d] ??= {};
+    tree[d][s] ??= {};
+    tree[d][s][u] ??= {};
+    tree[d][s][u][i] ??= {};
+  });
+  return tree;
+}
+            
+    
+            function toggleAdditionalLevelsSection(enable) {
+                if (enable) {
+                    additionalLevelsSection.classList.remove('disabled-section');
+                    disabledOverlay.classList.add('hidden');
+                } else {
+                    additionalLevelsSection.classList.add('disabled-section');
+                    disabledOverlay.classList.remove('hidden');
+                }
+            }
+
+            function renderExtraLevelValuesList() {
+              const list = document.getElementById('extra-level-values-list');
+              if (!list) return;
+              list.innerHTML = '';
+              if (!extraLevelValues.length) {
+                const p = document.createElement('p');
+                p.className = 'text-sm text-gray-500';
+                p.textContent = 'No entries yet. Add values above (e.g., Domestic Pipes, Fire Pipes, Drainage Pipes).';
+                list.appendChild(p);
+                return;
+              }
+              extraLevelValues.forEach(v => {
+                const chip = document.createElement('span');
+                chip.className = 'inline-flex items-center px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs border';
+                chip.innerHTML = `
+                  <span class="mr-2">${v}</span>
+                  <button class="remove-extra-level-value text-red-600 hover:text-red-800" data-val="${v}" title="Remove">✕</button>
+                `;
+                list.appendChild(chip);
+              });
+            }
+
+            function bindExtraLevelValuesUi() {
+              const addBtn = document.getElementById('add-extra-level-value-btn');
+              const input  = document.getElementById('extra-level-value-input');
+              if (addBtn && input) {
+                addBtn.onclick = () => {
+                  const raw = (input.value || '').trim();
+                  if (!raw) { showMessageBox('Please enter a value.', true); return; }
+                  const exists = extraLevelValues.some(x => x.toLowerCase() === raw.toLowerCase());
+                  if (exists) { showMessageBox('This value already exists.', true); return; }
+                  extraLevelValues.push(raw);
+                  input.value = '';
+                  renderExtraLevelValuesList();
+                  renderDynamicAdditionalLevelSelects(dynamicAdditionalLevelsContainer);
+                  renderDynamicAdditionalLevelSelects(modifyDynamicAdditionalLevelsContainer, true);
+                  updateExportChosenExtraLevelSelect();
+                  showMessageBox('Extra level value added.');
+                };
+              }
+              const list = document.getElementById('extra-level-values-list');
+              if (list) {
+                list.onclick = (e) => {
+                  const btn = e.target.closest('.remove-extra-level-value');
+                  if (!btn) return;
+                  const val = btn.getAttribute('data-val');
+                  const inUse = collectedData.some(d => d.additionalLevel?.value === val);
+                  if (inUse) { showMessageBox('Cannot remove: this value is used by existing attributes.', true); return; }
+                  extraLevelValues = extraLevelValues.filter(x => x !== val);
+                  renderExtraLevelValuesList();
+                  renderDynamicAdditionalLevelSelects(dynamicAdditionalLevelsContainer);
+                  renderDynamicAdditionalLevelSelects(modifyDynamicAdditionalLevelsContainer, true);
+                  updateExportChosenExtraLevelSelect();
+                  showMessageBox('Extra level value removed.');
+                };
+              }
+            }
+            
+            function renderAdditionalLevels() {
+              additionalLevelsContainer.innerHTML = '';
+              if (additionalLevels.length === 1) {
+                additionalLevelsContainer.innerHTML = `
+                  <div class="flex items-center justify-between p-3 bg-white rounded-md shadow-sm border border-gray-200">
+                    <span class="font-medium text-gray-800">Extra Level (inherits CSI Item)</span>
+                    <button class="text-red-500 hover:text-red-700 font-medium text-sm delete-level-btn" data-id="1">Delete</button>
+                  </div>
+                  <div id="extra-level-manager" class="mt-3 p-3 bg-white rounded-md border border-gray-200">
+                    <div class="flex items-end space-x-2">
+                      <div class="flex-1">
+                        <label for="extra-level-value-input" class="block text-sm font-medium text-gray-700">Add entry to Extra Level</label>
+                        <input id="extra-level-value-input" type="text" placeholder="e.g., Domestic Pipes"
+                               class="mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                      </div>
+                      <button id="add-extra-level-value-btn"
+                              class="px-3 py-2 bg-indigo-600 text-white text-sm rounded-md shadow-sm hover:bg-indigo-700">
+                        Add Value
+                      </button>
+                    </div>
+                    <div id="extra-level-values-list" class="mt-3 flex flex-wrap gap-2"></div>
+                  </div>
+                `;
+                renderExtraLevelValuesList();
+                bindExtraLevelValuesUi();
+              } else {
+                additionalLevelsContainer.innerHTML = `<p class="text-gray-500 text-center">No additional levels defined.</p>`;
+              }
+            }
+            
+            function deleteAdditionalLevel(levelId) {
+              additionalLevels = [];
+              extraLevelValues = []; // Reset extra level values
+              collectedData = collectedData.map(entry => ({ ...entry, additionalLevel: null }));
+              currentExtraLevelValue = "";
+              renderAdditionalLevels();
+              renderCollectedData();
+              renderDynamicAdditionalLevelSelects(dynamicAdditionalLevelsContainer);
+              additionalLevelSelectContainer.classList.add('hidden');
+              renderCurrentPath();
+              showMessageBox("Extra level removed. All attributes remain under the parent CSI item.");
+            }
+
+            function renderDynamicAdditionalLevelSelects(container, isModifyModal = false, entry = null) {
+              container.innerHTML = '';
+              const { division, section, subsection, item } = getSelectedPath(divisionSelect, sectionSelect, subsectionSelect, itemSelect, dynamicAdditionalLevelsContainer);
+              const parentReady = division && section && subsection && item;
+              const extraLevelExists = additionalLevels.length === 1 && extraLevelValues.length > 0;
+
+              if ((!parentReady && !isModifyModal) || !extraLevelExists) {
+                additionalLevelSelectContainer.classList.add('hidden');
+                return;
+              }
+              additionalLevelSelectContainer.classList.remove('hidden');
+
+              const idPrefix = isModifyModal ? 'modify-' : '';
+              const selectId = `${idPrefix}extra-level-select`;
+
+              const wrapper = document.createElement('div');
+              wrapper.className = 'flex flex-col space-y-1';
+              wrapper.innerHTML = `
+                <label for="${selectId}" class="block text-sm font-medium text-gray-700">Extra Level Value</label>
+                <select id="${selectId}" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                  <option value="">Select Value</option>
+                  ${extraLevelValues.map(v => `<option value="${v}">${v}</option>`).join('')}
+                </select>
+                ${extraLevelValues.length === 0 ? `<p class="text-xs text-gray-500">No entries yet. Add values in the Additional Levels section.</p>` : ''}
+              `;
+              container.appendChild(wrapper);
+
+              const sel = wrapper.querySelector(`#${selectId}`);
+
+              if (isModifyModal && entry?.additionalLevel?.value) {
+                sel.value = entry.additionalLevel.value;
+              } else if (currentExtraLevelValue) {
+                sel.value = currentExtraLevelValue;
+              }
+
+              sel.addEventListener('change', () => {
+                currentExtraLevelValue = sel.value || "";
+                renderCurrentPath();
+              });
+            }
+
+            function renderCollectedData() {
+                collectedDataContainer.innerHTML = '';
+                if (collectedData.length > 0) {
+                    collectedDataPlaceholder.classList.add('hidden');
+                    collectedData.forEach(entry => {
+                        const entryDiv = document.createElement('div');
+                        entryDiv.className = 'p-4 my-2 bg-white rounded-md shadow-sm border border-gray-200';
+                        
+                        const path = [entry.division, entry.section, entry.subsection, entry.item];
+                        if (entry.additionalLevel) {
+                            path.push(entry.additionalLevel.value);
+                        }
+                        
+                        entryDiv.innerHTML = `<p class="font-bold text-gray-800 mb-2">${path.join(' > ')}</p>`;
+                        
+                        entry.attributes.forEach(attr => {
+                            const attrDiv = document.createElement('div');
+                            attrDiv.className = 'py-2 border-t border-gray-100 flex items-start justify-between';
+                            
+                            const attributeDisplay = document.createElement('div');
+                            attributeDisplay.className = 'flex-grow';
+                            
+                            const attrNameAndUnit = `<span class="font-medium">${attr.name}</span>`;
+                            const mandatoryTag = attr.mandatory ? '<span class="ml-2 px-2 py-1 bg-red-100 text-red-800 text-xs font-semibold rounded-full">Mandatory</span>' : '';
+                            
+                            attributeDisplay.innerHTML = `<div class="flex items-center mb-1">${attrNameAndUnit} ${mandatoryTag}</div>`;
+                            
+                            if (attr.standardValues.length > 0) {
+                                const valuesList = document.createElement('ul');
+                                valuesList.className = 'list-disc list-inside text-sm text-gray-600 ml-4';
+                                attr.standardValues.forEach(val => {
+                                    const valueItem = document.createElement('li');
+                                    valueItem.textContent = `${val.name} (${val.unit})`;
+                                    valuesList.appendChild(valueItem);
+                                });
+                                attributeDisplay.appendChild(valuesList);
+                            } else {
+                                const noValues = document.createElement('p');
+                                noValues.className = 'text-sm text-gray-500 ml-4';
+                                noValues.textContent = 'No standard values defined.';
+                                attributeDisplay.appendChild(noValues);
+                            }
+
+                            // NEW: Review section display
+                            const reviewSection = document.createElement('div');
+                            reviewSection.className = 'review-section text-sm text-gray-600 space-y-1';
+                            const reviewersSummary = attr.reviewers && attr.reviewers.length > 0 ? attr.reviewers.map(r => `${r.name} (${r.decision || 'No Decision'}, ${r.timestamp || 'No Timestamp'})`).join('; ') : 'None';
+                            reviewSection.innerHTML = `
+                                <p><span class="font-semibold text-gray-700">Reviewer(s):</span> ${reviewersSummary}</p>
+                                <p><span class="font-semibold text-gray-700">Overall Comment:</span> ${attr.overallReviewComment || 'None'}</p>
+                            `;
+                            attributeDisplay.appendChild(reviewSection);
+
+                            const buttonGroup = document.createElement('div');
+                            buttonGroup.className = 'flex-shrink-0 flex space-x-2';
+
+                            const modifyButton = document.createElement('button');
+                            modifyButton.textContent = 'Modify';
+                            modifyButton.className = 'text-indigo-500 hover:text-indigo-700 font-medium text-sm';
+                            modifyButton.addEventListener('click', () => {
+                                showModifyAttributeModal(entry, attr);
+                            });
+
+                            const deleteButton = document.createElement('button');
+                            deleteButton.textContent = 'Delete';
+                            deleteButton.className = 'text-red-500 hover:text-red-700 font-medium text-sm';
+                            deleteButton.addEventListener('click', () => {
+                                deleteAttribute(entry.division, entry.section, entry.subsection, entry.item, entry.additionalLevel?.value || '', attr.id);
+                            });
+
+                            buttonGroup.appendChild(modifyButton);
+                            buttonGroup.appendChild(deleteButton);
+                            
+                            attrDiv.appendChild(attributeDisplay);
+                            attrDiv.appendChild(buttonGroup);
+                            entryDiv.appendChild(attrDiv);
+                        });
+                        
+                        collectedDataContainer.appendChild(entryDiv);
+                    });
+                } else {
+                    collectedDataPlaceholder.classList.remove('hidden');
+                }
+            }
+
+            function deleteAttribute(division, section, subsection, item, additionalLevelValue, id) {
+                const entryIndex = collectedData.findIndex(d =>
+                    d.division === division &&
+                    d.section === section &&
+                    d.subsection === subsection &&
+                    d.item === item &&
+                    (
+                        (d.additionalLevel?.value === additionalLevelValue) ||
+                        (!d.additionalLevel && !additionalLevelValue)
+                    )
+                );
+
+                if (entryIndex !== -1) {
+                    const entry = collectedData[entryIndex];
+                    entry.attributes = entry.attributes.filter(attr => attr.id != id);
+                    if (entry.attributes.length === 0) {
+                        collectedData.splice(entryIndex, 1);
+                    }
+                }
+                renderCollectedData();
+                showMessageBox("Attribute deleted successfully.");
+            }
+
+            function showModifyAttributeModal(entry, attr) {
+                currentlyModifyingAttribute = { entry, attr };
+                
+                setupModifyCsiSelects(entry);
+                modifyAttributeName.value = attr.name;
+                modifyMandatoryCheckbox.checked = attr.mandatory;
+                
+                modifyAttributeValuesContainer.innerHTML = '';
+                attr.standardValues.forEach(val => {
+                    const newRow = document.createElement('div');
+                    newRow.className = 'flex space-x-2 items-center';
+                    newRow.innerHTML = `
+                        <input type="text" class="modify-attribute-value-name-input mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm" placeholder="Value Name" value="${val.name}">
+                        <input type="text" list="unit-options" class="modify-attribute-value-unit-input mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm" placeholder="Value Unit (optional)" value="${val.unit}">
+                    `;
+                    modifyAttributeValuesContainer.appendChild(newRow);
+                });
+                
+                if (attr.standardValues.length === 0) {
+                    modifyAttributeValuesContainer.innerHTML = `
+                         <div class="flex space-x-2 items-center">
+                            <input type="text" class="modify-attribute-value-name-input mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm" placeholder="Value Name">
+                            <input type="text" list="unit-options" class="modify-attribute-value-unit-input mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm" placeholder="Value Unit (optional)">
+                        </div>
+                    `;
+                }
+                
+                // NEW: Populate parent/level/review fields
+                modifyParentAttributeName.value = attr.parentAttributeName || '';
+                modifyParentStandardValues.value = attr.parentStandardValues || '';
+                modifyAttributeLevel.value = attr.attributeLevel || '';
+                modifyOverallReviewComment.value = attr.overallReviewComment || '';
+                renderReviewerSummary(attr.reviewers || []);
+                currentReviewers = JSON.parse(JSON.stringify(attr.reviewers || []));
+
+                renderDynamicAdditionalLevelSelects(modifyDynamicAdditionalLevelsContainer, true, entry);
+                
+                
+                // --- PATCH: Hide Parent & Reviewer subsections in Modify modal (UI only)
+                (function() {
+                    try {
+                        const parentSectionContainer = (typeof modifyParentAttributeName !== 'undefined' && modifyParentAttributeName && modifyParentAttributeName.closest)
+                            ? modifyParentAttributeName.closest('div.space-y-4.pt-4.border-t.border-gray-200')
+                            : null;
+
+                        const reviewerSectionContainer = (typeof manageReviewersBtn !== 'undefined' && manageReviewersBtn && manageReviewersBtn.closest)
+                            ? manageReviewersBtn.closest('div.space-y-4.pt-4.border-t.border-gray-200')
+                            : ((typeof modifyOverallReviewComment !== 'undefined' && modifyOverallReviewComment && modifyOverallReviewComment.closest)
+                                ? modifyOverallReviewComment.closest('div.space-y-4.pt-4.border-t.border-gray-200')
+                                : null);
+
+                        if (parentSectionContainer) {
+                            parentSectionContainer.style.display = 'none';
+                            parentSectionContainer.querySelectorAll('input, textarea, select, button').forEach(el => {
+                                el.setAttribute('tabindex', '-1');
+                                el.setAttribute('aria-hidden', 'true');
+                            });
+                        }
+                        if (reviewerSectionContainer) {
+                            reviewerSectionContainer.style.display = 'none';
+                            reviewerSectionContainer.querySelectorAll('input, textarea, select, button').forEach(el => {
+                                el.setAttribute('tabindex', '-1');
+                                el.setAttribute('aria-hidden', 'true');
+                            });
+                        }
+                        if (typeof manageReviewersBtn !== 'undefined' && manageReviewersBtn) {
+                            manageReviewersBtn.disabled = true;
+                            manageReviewersBtn.classList.add('pointer-events-none','opacity-60');
+                        }
+                    } catch (e) {
+                        console.warn('[PATCH] Hide sections error:', e);
+                    }
+                })();
+
+                showModal(modifyAttributeModal);
+            }
+
+            function setupModifyCsiSelects(entry) {
+                populateSelect(modifyDivisionSelect, csiHierarchy, 'Select Division');
+                modifyDivisionSelect.value = entry.division;
+
+                if (entry.division) {
+                    populateSelect(modifySectionSelect, csiHierarchy[entry.division], 'Select Section');
+                    modifySectionSelect.value = entry.section;
+                }
+
+                if (entry.division && entry.section) {
+                    populateSelect(modifySubsectionSelect, csiHierarchy[entry.division][entry.section], 'Select Detailed Section');
+                    modifySubsectionSelect.value = entry.subsection;
+                }
+
+                if (entry.division && entry.section && entry.subsection) {
+                    populateSelect(modifyItemSelect, csiHierarchy[entry.division][entry.section][entry.subsection], 'Select Item');
+                    modifyItemSelect.value = entry.item;
+                }
+
+                modifyDivisionSelect.onchange = () => {
+                    const selectedDivision = modifyDivisionSelect.value;
+                    if (selectedDivision) { populateSelect(modifySectionSelect, csiHierarchy[selectedDivision], 'Select Section'); } else { clearSelect(modifySectionSelect, 'Select Section'); }
+                    clearSelect(modifySubsectionSelect, 'Select Detailed Section');
+                    clearSelect(modifyItemSelect, 'Select Item');
+                };
+                
+                modifySectionSelect.onchange = () => {
+                    const selectedDivision = modifyDivisionSelect.value;
+                    const selectedSection = modifySectionSelect.value;
+                    if (selectedSection) { populateSelect(modifySubsectionSelect, csiHierarchy[selectedDivision][selectedSection], 'Select Detailed Section'); } else { clearSelect(modifySubsectionSelect, 'Select Detailed Section'); }
+                    clearSelect(modifyItemSelect, 'Select Item');
+                };
+
+                modifySubsectionSelect.onchange = () => {
+                    const selectedDivision = modifyDivisionSelect.value;
+                    const selectedSection = modifySectionSelect.value;
+                    const selectedSubsection = modifySubsectionSelect.value;
+                    if (selectedSubsection) { populateSelect(modifyItemSelect, csiHierarchy[selectedDivision][selectedSection][selectedSubsection], 'Select Item'); } else { clearSelect(modifyItemSelect, 'Select Item'); }
+                };
+            }
+
+            // NEW: render reviewer summary for modify modal
+            function renderReviewerSummary(reviewers) {
+                if (reviewers.length === 0) {
+                    modifyReviewersList.innerHTML = `<span class="text-gray-500">No reviewers</span>`;
+                    return;
+                }
+                const summary = reviewers.map(r => `${r.name} (${r.decision || 'No Decision'})`).join('; ');
+                modifyReviewersList.textContent = summary;
+            }
+
+            // NEW: Render reviewer inputs for nested modal
+            function renderReviewerInputs() {
+                reviewerInputsContainer.innerHTML = '';
+                currentReviewers.forEach((reviewer, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'flex space-x-2 items-center';
+                    div.innerHTML = `
+                        <input type="text" placeholder="Name" value="${reviewer.name}" data-key="name" class="reviewer-input block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm">
+                        <select data-key="decision" class="reviewer-input block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm">
+                            <option value="">Select Decision</option>
+                            <option value="Approved" ${reviewer.decision === 'Approved' ? 'selected' : ''}>Approved</option>
+                            <option value="Rejected" ${reviewer.decision === 'Rejected' ? 'selected' : ''}>Rejected</option>
+                            <option value="Changes Requested" ${reviewer.decision === 'Changes Requested' ? 'selected' : ''}>Changes Requested</option>
+                            <option value="Other" ${reviewer.decision === 'Other' ? 'selected' : ''}>Other</option>
+                        </select>
+                        <input type="text" placeholder="Timestamp" value="${reviewer.timestamp}" data-key="timestamp" class="reviewer-input block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm">
+                        <button class="remove-reviewer-btn text-red-500 hover:text-red-700">✕</button>
+                    `;
+                    div.querySelector('.remove-reviewer-btn').addEventListener('click', () => {
+                        currentReviewers.splice(index, 1);
+                        renderReviewerInputs();
+                    });
+                    reviewerInputsContainer.appendChild(div);
+                });
+            }
+
+            function splitCodeDesc(s) {
+              if (!s || typeof s !== 'string') return { code: '', desc: '' };
+              const idx = s.indexOf(' - ');
+              if (idx === -1) return { code: s.trim(), desc: '' };
+              return {
+                code: s.slice(0, idx).trim(),
+                desc: s.slice(idx + 3).trim()
+              };
+            }
+            
+            function performExcelExport(data, fileNameSuffix = "All_Data", referencePOS = "") {
+                if (data.length === 0) {
+                    showMessageBox("No data to export.", true);
+                    return;
+                }
+
+                const exportableData = [];
+                data.forEach(entry => {
+                    const d = splitCodeDesc(entry.division);
+                    const s = splitCodeDesc(entry.section);
+                    const ds = splitCodeDesc(entry.subsection);
+                    const i = splitCodeDesc(entry.item);
+
+                    entry.attributes.forEach(attr => {
+                        const row = {
+                            'CSI Division Code': d.code,
+                            'CSI Division Description': d.desc,
+                            'CSI Section Code': s.code,
+                            'CSI Section Description': s.desc,
+                            'CSI Detailed Section Code': ds.code,
+                            'CSI Detailed Section Description': ds.desc,
+                            'CSI Item Code': i.code,
+                            'CSI Item Description': i.desc,
+                            'Additional Level Name': attr.additionalLevel?.name || entry.additionalLevel?.name || '',
+                            'Additional Level Value': attr.additionalLevel?.value || entry.additionalLevel?.value || '',
+                            'Attribute Name': attr.name,
+                            'Standard Values': (attr.standardValues || [])
+                                .map(v => v.unit ? `${v.name} (${v.unit})` : v.name)
+                                .join(', '),
+                            'Mandatory': attr.mandatory ? 'Yes' : 'No',
+                            'Parent Attribute Name': attr.parentAttributeName || '',
+                            'Parent Standard Values': attr.parentStandardValues || '',
+                            'Attribute Level': attr.attributeLevel || '',
+                            'Overall Review Comment': attr.overallReviewComment || '',
+                            'Reference POS': referencePOS || ''
+                        };
+
+                        // Dynamically add reviewer columns
+                        if (attr.reviewers && attr.reviewers.length > 0) {
+                           attr.reviewers.forEach((reviewer, index) => {
+                               row[`Reviewer ${index + 1}`] = `Name:${reviewer.name} | Decision:${reviewer.decision || ''} | Timestamp:${reviewer.timestamp || ''}`;
+                           });
+                        }
+                        
+                        exportableData.push(row);
+                    });
+                });
+
+                if (exportableData.length === 0) {
+                     showMessageBox("No attributes found for the selected filter.", true);
+                    return;
+                }
+                
+                const headers = [
+                    'CSI Division Code', 'CSI Division Description', 'CSI Section Code', 'CSI Section Description',
+                    'CSI Detailed Section Code', 'CSI Detailed Section Description', 'CSI Item Code', 'CSI Item Description',
+                    'Additional Level Name', 'Additional Level Value', 'Attribute Name', 'Standard Values', 'Mandatory',
+                    'Parent Attribute Name', 'Parent Standard Values', 'Attribute Level', 'Overall Review Comment', 'Reference POS'
+                ];
+                
+                const allKeys = new Set(headers);
+                exportableData.forEach(row => Object.keys(row).forEach(key => allKeys.add(key)));
+                const finalHeaders = Array.from(allKeys).sort((a,b) => {
+                    const aIsReviewer = a.startsWith('Reviewer ');
+                    const bIsReviewer = b.startsWith('Reviewer ');
+                    if (aIsReviewer && bIsReviewer) return parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]);
+                    if (aIsReviewer) return 1;
+                    if (bIsReviewer) return -1;
+                    return headers.indexOf(a) - headers.indexOf(b);
+                });
+
+                const ws = XLSX.utils.json_to_sheet(exportableData, { header: finalHeaders });
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Attributes");
+                XLSX.writeFile(wb, `CSI_Attributes_Export_${fileNameSuffix}.xlsx`);
+            }
+
+            function populateUnitDatalist() {
+                const dl = document.getElementById('unit-options');
+                if (!dl) return;
+                dl.innerHTML = "";
+                UNIT_CHOICES.forEach(u => {
+                    const opt = document.createElement('option');
+                    opt.value = u;
+                    dl.appendChild(opt);
+                });
+            }
+
+            function updateExportChosenExtraLevelSelect() {
+              exportChosenOptionsContainer.innerHTML = '';
+              const div = document.createElement('div');
+              div.className = 'flex flex-col space-y-1';
+              div.innerHTML = `
+                <label for="export-extra-level-select" class="block text-sm font-medium text-gray-700">Extra Level Value</label>
+                <select id="export-extra-level-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
+                  <option value="">Select Value</option>
+                  ${extraLevelValues.map(v => `<option value="${v}">${v}</option>`).join('')}
+                </select>
+              `;
+              exportChosenOptionsContainer.appendChild(div);
+            }
+
+            // =========================================================
+            //  NEW Import & Parsing Functions
+            // =========================================================
+            
+            function parseStandardValuesCell(cell) {
+                if (!cell) return [];
+                const values = String(cell).split(/,|\n/).map(s => s.trim()).filter(s => s.length > 0);
+                return values.map(v => {
+                    const match = v.match(/(.+?)\s*\((.+?)\)$/);
+                    if (match) {
+                        return { name: match[1].trim(), unit: match[2].trim() };
+                    }
+                    return { name: v, unit: '' };
+                });
+            }
+
+            function parseMandatory(cell) {
+                if (!cell) return false;
+                return String(cell).toLowerCase() === 'yes';
+            }
+
+            function extractReviewers(row) {
+                const reviewers = [];
+                for (const key in row) {
+                    if (key.match(/^Reviewer\s+\d+$/i)) {
+                        const cell = row[key];
+                        if (cell) {
+                            const parts = String(cell).split('|').map(p => p.trim());
+                            const reviewer = { name: '', decision: '', timestamp: '' };
+                            parts.forEach(p => {
+                                const kv = p.split(':').map(s => s.trim());
+                                if (kv.length === 2) {
+                                    const k = kv[0].toLowerCase();
+                                    const v = kv[1];
+                                    if (k === 'name') reviewer.name = v;
+                                    if (k === 'decision') reviewer.decision = v;
+                                    if (k === 'timestamp') reviewer.timestamp = v;
+                                }
+                            });
+                            if (reviewer.name) {
+                                reviewers.push(reviewer);
+                            }
+                        }
+                    }
+                }
+                return reviewers;
+            }
+
+            function findOrCreateEntry(data, row) {
+                const hierarchyPath = {
+                    division: `${row['CSI Division Code']} - ${row['CSI Division Description']}`,
+                    section: `${row['CSI Section Code']} - ${row['CSI Section Description']}`,
+                    subsection: `${row['CSI Detailed Section Code']} - ${row['CSI Detailed Section Description']}`,
+                    item: `${row['CSI Item Code']} - ${row['CSI Item Description']}`,
+                    additionalLevel: row['Additional Level Value'] ? { value: row['Additional Level Value'] } : null
+                };
+
+                let entry = data.find(d =>
+                    d.division === hierarchyPath.division &&
+                    d.section === hierarchyPath.section &&
+                    d.subsection === hierarchyPath.subsection &&
+                    d.item === hierarchyPath.item &&
+                    (
+                        (d.additionalLevel?.value === hierarchyPath.additionalLevel?.value) ||
+                        (!d.additionalLevel && !hierarchyPath.additionalLevel)
+                    )
+                );
+
+                if (!entry) {
+                    entry = { ...hierarchyPath, attributes: [] };
+                    data.push(entry);
+                }
+                return entry;
+            }
+
+            function findOrCreateAttribute(entry, row) {
+                const attributeName = String(row['Attribute Name']).trim();
+                let attribute = entry.attributes.find(a => a.name === attributeName);
+                
+                const mandatory = parseMandatory(row['Mandatory']);
+                const standardValues = parseStandardValuesCell(row['Standard Values']);
+                const reviewers = extractReviewers(row);
+                const overallReviewComment = row['Overall Review Comment'] || '';
+                const parentAttributeName = row['Parent Attribute Name'] || '';
+                const parentStandardValues = row['Parent Standard Values'] || '';
+                const attributeLevel = row['Attribute Level'] || '';
+
+                if (attribute) {
+                    // Update existing attribute
+                    attribute.mandatory = mandatory;
+                    attribute.standardValues = standardValues;
+                    attribute.reviewers = reviewers;
+                    attribute.overallReviewComment = overallReviewComment;
+                    attribute.parentAttributeName = parentAttributeName;
+                    attribute.parentStandardValues = parentStandardValues;
+                    attribute.attributeLevel = attributeLevel;
+                } else {
+                    // Create new attribute
+                    attribute = {
+                        id: Date.now() + Math.random(), // Unique ID generation
+                        name: attributeName,
+                        mandatory,
+                        standardValues,
+                        reviewers,
+                        overallReviewComment,
+                        parentAttributeName,
+                        parentStandardValues,
+                        attributeLevel
+                    };
+                    entry.attributes.push(attribute);
+                }
+                return attribute;
+            }
+            
+            // =========================================================
+            //  Event Listeners & Main Logic
+            // =========================================================
+
+             divisionSelect.addEventListener('change', () => {
+    clearSelect(sectionSelect, 'Select Section');
+    clearSelect(subsectionSelect, 'Select Detailed Section');
+    clearSelect(itemSelect, 'Select Item');
+    const selectedDivision = divisionSelect.value;
+    if (selectedDivision && csiHierarchy[selectedDivision]) {
+      populateSelect(sectionSelect, csiHierarchy[selectedDivision], 'Select Section');
+    }
+  });
+
+  // CSI Section select change listener
+  sectionSelect.addEventListener('change', () => {
+    clearSelect(subsectionSelect, 'Select Detailed Section');
+    clearSelect(itemSelect, 'Select Item');
+    const selectedDivision = divisionSelect.value;
+    const selectedSection = sectionSelect.value;
+    if (selectedDivision && selectedSection && csiHierarchy[selectedDivision][selectedSection]) {
+      populateSelect(subsectionSelect, csiHierarchy[selectedDivision][selectedSection], 'Select Detailed Section');
+    }
+  });
+
+  // CSI Detailed Section select change listener
+  subsectionSelect.addEventListener('change', () => {
+    clearSelect(itemSelect, 'Select Item');
+    const selectedDivision = divisionSelect.value;
+    const selectedSection = sectionSelect.value;
+    const selectedDetailedSection = subsectionSelect.value;
+    if (selectedDivision && selectedSection && selectedDetailedSection && csiHierarchy[selectedDivision][selectedSection][selectedDetailedSection]) {
+      populateSelect(itemSelect, csiHierarchy[selectedDivision][selectedSection][selectedDetailedSection], 'Select Item');
+    }
+  });
+    // END OF NEW CODE TO ADD
+    
+    /* ... The function below this should be updateUIForCSIHierarchy() ... */
+    function updateUIForCSIHierarchy() {
+        // ...
+    }
+
+            sectionSelect.addEventListener('change', () => {
+                const selectedDivision = divisionSelect.value;
+                const selectedSection = sectionSelect.value;
+                if (selectedSection) {
+                    populateSelect(subsectionSelect, csiHierarchy[selectedDivision][selectedSection], 'Select Detailed Section');
+                } else {
+                    clearSelect(subsectionSelect, 'Select Detailed Section');
+                }
+                clearSelect(itemSelect, 'Select Item');
+                toggleAdditionalLevelsSection(false);
+                renderDynamicAdditionalLevelSelects(dynamicAdditionalLevelsContainer);
+                renderCurrentPath();
+            });
+
+            subsectionSelect.addEventListener('change', () => {
+                const selectedDivision = divisionSelect.value;
+                const selectedSection = sectionSelect.value;
+                const selectedSubsection = subsectionSelect.value;
+                if (selectedSubsection) {
+                    populateSelect(itemSelect, csiHierarchy[selectedDivision][selectedSection][selectedSubsection], 'Select Item');
+                } else {
+                    clearSelect(itemSelect, 'Select Item');
+                }
+                toggleAdditionalLevelsSection(false);
+                renderDynamicAdditionalLevelSelects(dynamicAdditionalLevelsContainer);
+                renderCurrentPath();
+            });
+
+            itemSelect.addEventListener('change', () => {
+                const { division, section, subsection, item } = getSelectedPath(divisionSelect, sectionSelect, subsectionSelect, itemSelect, dynamicAdditionalLevelsContainer);
+                if (division && section && subsection && item) {
+                     toggleAdditionalLevelsSection(true);
+                } else {
+                     toggleAdditionalLevelsSection(false);
+                }
+                renderDynamicAdditionalLevelSelects(dynamicAdditionalLevelsContainer);
+                renderCurrentPath();
+            });
+            
+            hierarchyFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) {
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                        if (jsonData.length > 0) {
+                            window.csiHierarchy = generateHierarchyTree(jsonData);
+if (USE_FLAT_CASCADES) {
+  wireFlatCascades(jsonData);   // Excel rows already have the right headers
+} else {
+  updateUIForCSIHierarchy();
+}
+                            showMessageBox("CSI Hierarchy imported successfully from your file!");
+                        } else {
+                            showMessageBox("The file is empty or in an incorrect format.", true);
+                        }
+                    } catch (error) {
+                        console.error('Error processing file:', error);
+                        showMessageBox("Failed to import file. Please check the format.", true);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            });
+
+            // NEW: Import button event listener
+            importReviewedBtn.addEventListener('click', () => {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = '.xlsx';
+                fileInput.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const data = new Uint8Array(event.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            const sheet = workbook.Sheets['CSI Attributes'];
+                            if (!sheet) {
+                                showMessageBox("Sheet named 'CSI Attributes' not found.", true);
+                                return;
+                            }
+                            const jsonData = XLSX.utils.sheet_to_json(sheet);
+                            
+                            const requiredHeaders = [
+                                'CSI Division Code', 'CSI Division Description', 'CSI Section Code', 'CSI Section Description',
+                                'CSI Detailed Section Code', 'CSI Detailed Section Description', 'CSI Item Code', 'CSI Item Description',
+                                'Attribute Name', 'Standard Values', 'Mandatory'
+                            ];
+                            const headers = Object.keys(jsonData[0] || {});
+                            const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+                            if (missingHeaders.length > 0) {
+                                showMessageBox(`The reviewed file is missing required headers: ${missingHeaders.join(', ')}. Please use the correct template.`, true);
+                                return;
+                            }
+
+                            // Process imported data
+                            const importedData = jsonData;
+                            let referencePOFromSheet = null;
+
+                            importedData.forEach(row => {
+                                const entry = findOrCreateEntry(collectedData, row);
+                                findOrCreateAttribute(entry, row);
+                                
+                                if (!referencePOFromSheet && (row['Reference PO(s)'] || row['Reference POS'])) {
+                                    referencePOFromSheet = row['Reference PO(s)'] || row['Reference POS'];
+                                }
+                            });
+
+                            // Set Reference PO input if found in sheet
+                            if (referencePOFromSheet) {
+                                referencePOInput.value = referencePOFromSheet;
+                            }
+                            
+                            renderCollectedData();
+                            showMessageBox("Attributes imported successfully. Existing attributes were updated, and new ones were added.");
+
+                        } catch (error) {
+                            console.error('Import error:', error);
+                            showMessageBox("Failed to import file. Please ensure it's a valid .xlsx file with the 'CSI Attributes' sheet.", true);
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                };
+                fileInput.click();
+            });
+
+            downloadTemplateBtn.addEventListener('click', () => {
+                const templateData = [
+                    ['CSI Division Code', 'CSI Division Description', 'CSI Section Code', 'CSI Section Description', 'CSI Detailed Section Code', 'CSI Detailed Section Description', 'CSI Item Code', 'CSI Item Description'],
+                    ['01 00 00', 'General Requirements', '01 30 00', 'Administrative Requirements', '01 31 00', 'Project Meetings', '01 31 19', 'Preconstruction Meetings']
+                ];
+                const ws = XLSX.utils.aoa_to_sheet(templateData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "CSI Hierarchy Template");
+                XLSX.writeFile(wb, "CSI_Hierarchy_Template.xlsx");
+            });
+
+            messageBoxOkBtn.addEventListener('click', () => {
+                hideModal(messageBoxModal);
+            });
+
+            addNewLevelBtn.addEventListener('click', () => {
+              if (additionalLevels.length >= 1) {
+                showMessageBox("Only one extra level is allowed.", true);
+                return;
+              }
+              const newLevelId = 1;
+              additionalLevels = [{ id: newLevelId }];
+              renderAdditionalLevels();
+              renderDynamicAdditionalLevelSelects(dynamicAdditionalLevelsContainer);
+              renderCurrentPath();
+              showMessageBox("Extra level added successfully!");
+            });
+
+            additionalLevelsContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('delete-level-btn')) {
+                    const levelId = parseInt(e.target.dataset.id);
+                    deleteAdditionalLevel(levelId);
+                }
+            });
+
+
+            addAttributeValueBtn.addEventListener('click', () => {
+                const newRow = document.createElement('div');
+                newRow.className = 'flex space-x-2 items-center';
+                newRow.innerHTML = `
+                    <input type="text" class="attribute-value-name-input mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm" placeholder="Value Name">
+                    <input type="text" list="unit-options" class="attribute-value-unit-input mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm" placeholder="Value Unit (optional)">
+                `;
+                attributeStandardValuesContainer.appendChild(newRow);
+            });
+            
+            modifyAddAttributeValueBtn.addEventListener('click', () => {
+                const newRow = document.createElement('div');
+                newRow.className = 'flex space-x-2 items-center';
+                newRow.innerHTML = `
+                    <input type="text" class="modify-attribute-value-name-input mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm" placeholder="Value Name">
+                    <input type="text" list="unit-options" class="modify-attribute-value-unit-input mt-1 block w-full pl-3 pr-3 py-2 text-base border-gray-300 rounded-md shadow-sm" placeholder="Value Unit (optional)">
+                `;
+                modifyAttributeValuesContainer.appendChild(newRow);
+            });
+
+            addAttributeBtn.addEventListener('click', () => {
+                const { division, section, subsection, item, additionalLevel } = getSelectedPath(divisionSelect, sectionSelect, subsectionSelect, itemSelect, dynamicAdditionalLevelsContainer);
+                const attrName = attributeNameInput.value.trim();
+                const mandatory = mandatoryCheckbox.checked;
+
+                if (!division || !section || !subsection || !item) {
+                    showMessageBox("Please select a complete CSI hierarchy path.", true);
+                    return;
+                }
+
+                if (!attrName) {
+                    showMessageBox("Attribute name is required.", true);
+                    return;
+                }
+
+                const valueNameInputs = attributeStandardValuesContainer.querySelectorAll('.attribute-value-name-input');
+                const valueUnitInputs = attributeStandardValuesContainer.querySelectorAll('.attribute-value-unit-input');
+
+                const standardValues = [];
+                for (let i = 0; i < valueNameInputs.length; i++) {
+                    const name = valueNameInputs[i].value.trim();
+                    const unit = valueUnitInputs[i].value.trim();
+                    if (name) {
+                        standardValues.push({ name: name, unit: unit });
+                    }
+                }
+
+                const csiPath = `${division} > ${section} > ${subsection} > ${item}`;
+                let entry = collectedData.find(d =>
+                    d.division === division &&
+                    d.section === section &&
+                    d.subsection === subsection &&
+                    d.item === item &&
+                    (
+                        (d.additionalLevel?.value === additionalLevel?.value) ||
+                        (!d.additionalLevel && !additionalLevel)
+                    )
+                );
+
+                if (!entry) {
+                    entry = { division, section, subsection, item, additionalLevel, attributes: [] };
+                    collectedData.push(entry);
+                }
+
+                if (entry.attributes.some(attr => attr.name === attrName)) {
+                    showMessageBox(`An attribute with the name "${attrName}" already exists for this path.`, true);
+                    return;
+                }
+                
+                entry.attributes.push({
+                     id: Date.now(),
+                     name: attrName,
+                     standardValues,
+                     mandatory,
+                     reviewers: [],
+                     overallReviewComment: '',
+                     parentAttributeName: '',
+                     parentStandardValues: '',
+                     attributeLevel: ''
+                });
+                
+                clearAttributeFields();
+                renderCollectedData();
+                renderDynamicAdditionalLevelSelects(dynamicAdditionalLevelsContainer);
+                showMessageBox("Attribute added successfully!");
+            });
+            
+            saveAttributeChangesBtn.addEventListener('click', () => {
+                if (!currentlyModifyingAttribute) {
+                    showMessageBox("Error: No attribute selected for modification.", true);
+                    return;
+                }
+                
+                const { entry, attr } = currentlyModifyingAttribute;
+                
+                const oldPath = {
+                    division: entry.division,
+                    section: entry.section,
+                    subsection: entry.subsection,
+                    item: entry.item,
+                    additionalLevel: entry.additionalLevel
+                };
+
+                const newPath = getSelectedPath(
+                    modifyDivisionSelect,
+                    modifySectionSelect,
+                    modifySubsectionSelect,
+                    modifyItemSelect,
+                    modifyDynamicAdditionalLevelsContainer
+                );
+
+                const newName = modifyAttributeName.value.trim();
+                const newMandatory = modifyMandatoryCheckbox.checked;
+                const newParentAttributeName = modifyParentAttributeName.value.trim();
+                const newParentStandardValues = modifyParentStandardValues.value.trim();
+                const newAttributeLevel = modifyAttributeLevel.value.trim();
+                const newOverallReviewComment = modifyOverallReviewComment.value.trim();
+                const newReviewers = currentReviewers.map(r => ({ ...r })); // clone
+
+                const valueNameInputs = modifyAttributeValuesContainer.querySelectorAll('.modify-attribute-value-name-input');
+                const valueUnitInputs = modifyAttributeValuesContainer.querySelectorAll('.modify-attribute-value-unit-input');
+                
+                if (!newName) {
+                    showMessageBox("Attribute name is required.", true);
+                    return;
+                }
+
+                if (!newPath.division || !newPath.section || !newPath.subsection || !newPath.item) {
+                     showMessageBox("Please select a complete CSI hierarchy path to save.", true);
+                     return;
+                }
+                
+                const newStandardValues = [];
+                for (let i = 0; i < valueNameInputs.length; i++) {
+                    const name = valueNameInputs[i].value.trim();
+                    const unit = valueUnitInputs[i].value.trim();
+                    if (name) {
+                        newStandardValues.push({ name: name, unit: unit });
+                    }
+                }
+
+                const newAttribute = {
+                    ...attr,
+                    name: newName,
+                    mandatory: newMandatory,
+                    standardValues: newStandardValues,
+                    reviewers: newReviewers,
+                    overallReviewComment: newOverallReviewComment,
+                    parentAttributeName: newParentAttributeName,
+                    parentStandardValues: newParentStandardValues,
+                    attributeLevel: newAttributeLevel
+                };
+                delete newAttribute.unit;
+
+                const pathChanged = oldPath.division !== newPath.division ||
+                                     oldPath.section !== newPath.section ||
+                                     oldPath.subsection !== newPath.subsection ||
+                                     oldPath.item !== newPath.item ||
+                                     (oldPath.additionalLevel?.value !== newPath.additionalLevel?.value);
+                
+                if (pathChanged) {
+                    const oldEntryIndex = collectedData.findIndex(d =>
+                        d.division === oldPath.division &&
+                        d.section === oldPath.section &&
+                        d.subsection === oldPath.subsection &&
+                        d.item === oldPath.item &&
+                        (
+                            (d.additionalLevel?.value === oldPath.additionalLevel?.value) ||
+                            (!d.additionalLevel && !oldPath.additionalLevel)
+                        )
+                    );
+
+                    if (oldEntryIndex !== -1) {
+                         const oldEntry = collectedData[oldEntryIndex];
+                         oldEntry.attributes = oldEntry.attributes.filter(a => a.id !== newAttribute.id);
+                         if (oldEntry.attributes.length === 0) {
+                             collectedData.splice(oldEntryIndex, 1);
+                         }
+                    }
+
+                    let newEntry = collectedData.find(d =>
+                         d.division === newPath.division &&
+                         d.section === newPath.section &&
+                         d.subsection === newPath.subsection &&
+                         d.item === newPath.item &&
+                         (
+                            (d.additionalLevel?.value === newPath.additionalLevel?.value) ||
+                            (!d.additionalLevel && !newPath.additionalLevel)
+                        )
+                    );
+                    
+                    if (!newEntry) {
+                        newEntry = {
+                             division: newPath.division,
+                             section: newPath.section,
+                             subsection: newPath.subsection,
+                             item: newPath.item,
+                             additionalLevel: newPath.additionalLevel,
+                             attributes: []
+                        };
+                        collectedData.push(newEntry);
+                    }
+
+                    if (newEntry.attributes.some(a => a.name === newAttribute.name && a.id !== newAttribute.id)) {
+                         showMessageBox(`An attribute with the name "${newAttribute.name}" already exists for the new path.`, true);
+                         return;
+                    }
+
+                    newEntry.attributes.push(newAttribute);
+
+                } else {
+                    attr.name = newName;
+                    attr.mandatory = newMandatory;
+                    attr.standardValues = newStandardValues;
+                    attr.reviewers = newReviewers;
+                    attr.overallReviewComment = newOverallReviewComment;
+                    attr.parentAttributeName = newParentAttributeName;
+                    attr.parentStandardValues = newParentStandardValues;
+                    attr.attributeLevel = newAttributeLevel;
+                    delete attr.unit;
+                }
+                
+                renderCollectedData();
+                hideModal(modifyAttributeModal);
+                currentlyModifyingAttribute = null;
+                renderDynamicAdditionalLevelSelects(dynamicAdditionalLevelsContainer);
+                showMessageBox("Attribute updated successfully!");
+            });
+            
+            cancelAttributeChangesBtn.addEventListener('click', () => {
+                hideModal(modifyAttributeModal);
+                currentlyModifyingAttribute = null;
+            });
+
+            // NEW: Manage reviewers button handler
+            manageReviewersBtn.addEventListener('click', () => {
+                renderReviewerInputs();
+                showModal(manageReviewersModal);
+            });
+
+            addReviewerBtn.addEventListener('click', () => {
+                currentReviewers.push({ name: '', decision: '', timestamp: '' });
+                renderReviewerInputs();
+            });
+
+            closeManageReviewersBtn.addEventListener('click', () => {
+                hideModal(manageReviewersModal);
+                renderReviewerSummary(currentReviewers);
+            });
+            
+            // NEW: Listener for input changes in the nested modal to update currentReviewers
+            reviewerInputsContainer.addEventListener('change', (e) => {
+                const input = e.target;
+                const index = Array.from(input.parentNode.parentNode.children).indexOf(input.parentNode);
+                const key = input.dataset.key;
+                if (currentReviewers[index]) {
+                    currentReviewers[index][key] = input.value;
+                }
+            });
+
+
+            clearAllBtn.addEventListener('click', () => {
+                collectedData = [];
+                additionalLevels = [];
+                extraLevelValues = [];
+                currentExtraLevelValue = "";
+                renderCollectedData();
+                renderAdditionalLevels();
+                additionalLevelSelectContainer.classList.add('hidden');
+                showMessageBox("All collected data and additional levels have been cleared.");
+            });
+
+            exportBtn.addEventListener('click', () => {
+                 if (collectedData.length === 0) {
+                     showMessageBox("No data to export.", true);
+                     return;
+                 }
+                
+                updateExportChosenExtraLevelSelect();
+                const expSel = document.getElementById('export-extra-level-select');
+                if (expSel && currentExtraLevelValue) expSel.value = currentExtraLevelValue;
+                exportAllRadio.checked = true;
+                exportChosenOptionsContainer.classList.add('hidden');
+                showModal(exportOptionsModal);
+            });
+
+            exportAllRadio.addEventListener('change', () => {
+                if (exportAllRadio.checked) {
+                    exportChosenOptionsContainer.classList.add('hidden');
+                }
+            });
+            
+            exportChosenRadio.addEventListener('change', () => {
+                 if (exportChosenRadio.checked) {
+                    exportChosenOptionsContainer.classList.remove('hidden');
+                 }
+            });
+
+            performExportBtn.addEventListener('click', () => {
+                const referencePOSInput = document.getElementById('reference-po-input');
+                const referencePOS = (referencePOSInput?.value || '').trim();
+                if (!referencePOS) {
+                    showMessageBox('Reference PO(s) is required before export.', true);
+                    return;
+                }
+                
+                let dataToExport = [];
+                let fileNameSuffix = "";
+
+                if (exportAllRadio.checked) {
+                    dataToExport = collectedData;
+                    fileNameSuffix = "All_Data";
+                    performExcelExport(dataToExport, fileNameSuffix, referencePOS);
+                } else if (exportChosenRadio.checked) {
+                    const chosenDivision = divisionSelect.value;
+                    const chosenSection = sectionSelect.value;
+                    const chosenSubsection = subsectionSelect.value;
+                    const chosenItem = itemSelect.value;
+                    
+                    if (!chosenDivision || !chosenSection || !chosenSubsection || !chosenItem) {
+                        showMessageBox("Please select a complete CSI hierarchy path before exporting chosen data.", true);
+                        return;
+                    }
+
+                    let chosenAdditionalLevel = null;
+                    const sel = document.getElementById('export-extra-level-select');
+                    if (sel && sel.value) {
+                      chosenAdditionalLevel = { value: sel.value };
+                    }
+
+                    dataToExport = collectedData.filter(attr =>
+                        attr.division === chosenDivision &&
+                        attr.section === chosenSection &&
+                        attr.subsection === chosenSubsection &&
+                        attr.item === chosenItem &&
+                        (
+                            (attr.additionalLevel?.value === chosenAdditionalLevel?.value) ||
+                            (!attr.additionalLevel && !chosenAdditionalLevel)
+                        )
+                    );
+                    fileNameSuffix = "Chosen_Item";
+                    performExcelExport(dataToExport, fileNameSuffix, referencePOS);
+                } else {
+                    showMessageBox("Please select an export option.", true);
+                    return;
+                }
+
+                hideModal(exportOptionsModal);
+            });
+            
+            cancelExportBtn.addEventListener('click', () => {
+                hideModal(exportOptionsModal);
+            });
+            
+            // Initial setup
+            populateUnitDatalist();
+            
+            // --- PATCH: Force unit inputs to be <select> from UNIT_CHOICES (adds 'mm2')
+            function fillUnitSelect(select, selectedValue) {
+                if (!select) return;
+                while (select.firstChild) select.removeChild(select.firstChild);
+                UNIT_CHOICES.forEach(u => {
+                    const opt = document.createElement('option');
+                    opt.value = u;
+                    opt.textContent = u;
+                    select.appendChild(opt);
+                });
+                if (selectedValue && UNIT_CHOICES.includes(selectedValue)) {
+                    select.value = selectedValue;
+                } else if (selectedValue) {
+                    select.value = "";
+                }
+            }
+
+            function convertUnitInputToSelect(inputEl) {
+                if (!inputEl || (inputEl.tagName && inputEl.tagName.toLowerCase() === 'select')) return null;
+                const sel = document.createElement('select');
+                sel.className = inputEl.className;
+                sel.classList.add('unit-select-forced');
+                const current = (inputEl.value || '').trim();
+                if (inputEl.parentNode) {
+                    inputEl.parentNode.replaceChild(sel, inputEl);
+                }
+                fillUnitSelect(sel, current);
+                return sel;
+            }
+
+            function ensureUnitInputsAreSelects(root) {
+                const inputs = Array.from(root.querySelectorAll('input.attribute-value-unit-input[list="unit-options"], input.modify-attribute-value-unit-input[list="unit-options"]'));
+                inputs.forEach(convertUnitInputToSelect);
+            }
+
+            // Initial conversion on page load
+            ensureUnitInputsAreSelects(document);
+
+            // Observe dynamic additions for both Create and Modify containers
+            try {
+                const createObserver = new MutationObserver(muts => {
+                    muts.forEach(m => {
+                        m.addedNodes.forEach(node => {
+                            if (!(node instanceof Element)) return;
+                            ensureUnitInputsAreSelects(node);
+                            node.querySelectorAll('select.attribute-value-unit-input, select.modify-attribute-value-unit-input').forEach(sel => {
+                                if (!sel.options || sel.options.length === 0) fillUnitSelect(sel, sel.value || '');
+                            });
+                        });
+                    });
+                });
+                if (typeof attributeStandardValuesContainer !== 'undefined' && attributeStandardValuesContainer) {
+                    createObserver.observe(attributeStandardValuesContainer, { childList: true, subtree: true });
+                }
+
+                const modifyObserver = new MutationObserver(muts => {
+                    muts.forEach(m => {
+                        m.addedNodes.forEach(node => {
+                            if (!(node instanceof Element)) return;
+                            ensureUnitInputsAreSelects(node);
+                            node.querySelectorAll('select.attribute-value-unit-input, select.modify-attribute-value-unit-input').forEach(sel => {
+                                if (!sel.options || sel.options.length === 0) fillUnitSelect(sel, sel.value || '');
+                            });
+                        });
+                    });
+                });
+                if (typeof modifyAttributeValuesContainer !== 'undefined' && modifyAttributeValuesContainer) {
+                    modifyObserver.observe(modifyAttributeValuesContainer, { childList: true, subtree: true });
+                }
+            } catch (e) {
+                console.warn('[PATCH units-as-select] observer setup failed:', e);
+            }
+
+toggleAdditionalLevelsSection(false);
+            renderCurrentPath();
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- ===== BEGIN: Supabase loader + robust cascades (drop-in) ===== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  /* === 0) CONFIG: put your real values here === */
+  const SUPABASE_URL  = 'https://cdyrxqhsxgmzxiknplpo.supabase.co';  // e.g., https://abcd1234.supabase.co
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkeXJ4cWhzeGdtenhpa25wbHBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyMTg1NzksImV4cCI6MjA3MTc5NDU3OX0.jpmfYSVd3AyTzDlK80idzTiYJqcL7rmhk_CP_ZQlA-Y';
+  // Prefer the view we created; it gives consistent snake_case columns
+  const SUPABASE_TABLE = 'csi_hierarchy_v';
+
+  // Create a client
+  const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  /* === 1) Helpers and safe fallbacks === */
+  const nb = /\u00A0/g; // non-breaking space
+  const norm = (s) => String(s ?? '').replace(nb, ' ').replace(/\s+/g, ' ').trim();
+
+  // Fallback define: generateHierarchyTree (only if your file doesn’t already define it)
+  (function ensureGenerateHierarchyTree() {
+    if (typeof window.generateHierarchyTree === 'function') return;
+    window.generateHierarchyTree = function(rows) {
+      // Nested: Division -> Section -> Detailed Section -> Item (as keys)
+      const tree = {};
+      (rows || []).forEach(r => {
+        const d = `${norm(r['CSI Division Code'])} - ${norm(r['CSI Division Description'])}`;
+        const s = `${norm(r['CSI Section Code'])} - ${norm(r['CSI Section Description'])}`;
+        const u = `${norm(r['CSI Detailed Section Code'])} - ${norm(r['CSI Detailed Section Description'])}`;
+        const i = `${norm(r['CSI Item Code'])} - ${norm(r['CSI Item Description'])}`;
+        tree[d] ??= {};           // sections under division
+        tree[d][s] ??= {};        // subsections under section
+        tree[d][s][u] ??= {};     // items under subsection
+        tree[d][s][u][i] ??= {};  // leaf
+      });
+      return tree;
+    };
+  })();
+
+  // Fallback define: updateUIForCSIHierarchy (if your original is missing)
+  (function ensureUpdateUI() {
+    if (typeof window.updateUIForCSIHierarchy === 'function') return;
+
+    window.updateUIForCSIHierarchy = function() {
+      const byId = (id) => document.getElementById(id);
+      const divisionSelect   = byId('division-select');
+      const sectionSelect    = byId('section-select');
+      const subsectionSelect = byId('subsection-select');
+      const itemSelect       = byId('item-select');
+
+      const reset = (sel, ph) => {
+        if (!sel) return;
+        sel.innerHTML = '';
+        const o = document.createElement('option');
+        o.value = '';
+        o.textContent = ph || 'Select...';
+        sel.appendChild(o);
+      };
+      const fill = (sel, arr) => (arr || []).forEach(v => {
+        const o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o);
+      });
+      const sortedKeys = (obj) => Object.keys(obj || {}).sort((a,b)=>a.localeCompare(b, undefined, {numeric:true}));
+
+      // Reset all
+      reset(divisionSelect,   'Select Division…');
+      reset(sectionSelect,    'Select Section…');
+      reset(subsectionSelect, 'Select Detailed Section…');
+      reset(itemSelect,       'Select Item…');
+
+      // Populate Divisions
+      const divKeys = sortedKeys(window.csiHierarchy);
+      fill(divisionSelect, divKeys);
+
+      // Wire cascades once
+      if (!window.__csiCascadeWired) {
+        divisionSelect?.addEventListener('change', () => {
+          const d = divisionSelect.value;
+          reset(sectionSelect,    'Select Section…');
+          reset(subsectionSelect, 'Select Detailed Section…');
+          reset(itemSelect,       'Select Item…');
+          const secs = sortedKeys(window.csiHierarchy?.[d]);
+          fill(sectionSelect, secs);
+        });
+
+        sectionSelect?.addEventListener('change', () => {
+          const d = divisionSelect.value;
+          const s = sectionSelect.value;
+          reset(subsectionSelect, 'Select Detailed Section…');
+          reset(itemSelect,       'Select Item…');
+          const subs = sortedKeys(window.csiHierarchy?.[d]?.[s]);
+          fill(subsectionSelect, subs);
+        });
+
+        subsectionSelect?.addEventListener('change', () => {
+          const d = divisionSelect.value;
+          const s = sectionSelect.value;
+          const u = subsectionSelect.value;
+          reset(itemSelect, 'Select Item…');
+          const items = Object.keys(window.csiHierarchy?.[d]?.[s]?.[u] || {}).sort((a,b)=>a.localeCompare(b, undefined, {numeric:true}));
+          fill(itemSelect, items);
+        });
+
+        window.__csiCascadeWired = true;
+      }
+    };
+  })();
+
+  /* === 2) Mapper: row -> Excel-like headers your UI already expects === */
+  function toExcelShape(r) {
+    // Supports either the snake_case view OR quoted base-table columns (fallback fields)
+    return {
+      'CSI Division Code':                norm(r.csi_division_code ?? r['CSI Division Code']),
+      'CSI Division Description':         norm(r.csi_division_description ?? r['CSI Division Description']),
+      'CSI Section Code':                 norm(r.csi_section_code ?? r['CSI Section Code']),
+      'CSI Section Description':          norm(r.csi_section_description ?? r['CSI Section Description']),
+      'CSI Detailed Section Code':        norm(r.csi_detailed_section_code ?? r['CSI Detailed Section Code']),
+      'CSI Detailed Section Description': norm(r.csi_detailed_section_description ?? r['CSI Detailed Section Description']),
+      'CSI Item Code':                    norm(r.csi_item_code ?? r['CSI Item Code']),
+      'CSI Item Description':             norm(r.csi_item_description ?? r['CSI Item Description'])
+    };
+  }
+
+  /* === 3) Robust cascades (flat-rows driven) — optional but recommended ===
+     If your original cascades have trouble because of hidden spaces or mismatched keys,
+     this version drives dropdowns directly from flat rows by code matching.
+     Enable by setting USE_FLAT_CASCADES = true.
+  */
+  
+
+  function wireFlatCascades(rows) {
+    const byId = (id) => document.getElementById(id);
+    const divisionSelect   = byId('division-select');
+    const sectionSelect    = byId('section-select');
+    const subsectionSelect = byId('subsection-select');
+    const itemSelect       = byId('item-select');
+
+    const reset = (sel, ph) => {
+  if (!sel) return;
+  sel.innerHTML = '';
+  const o = document.createElement('option');
+  o.value = ''; o.textContent = ph || 'Select.';
+  sel.appendChild(o);
+  sel.disabled = false;   // ← re-enable after resetting
+};
+    const fill = (sel, arr) => (arr || []).forEach(v => {
+      const o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o);
+    });
+    const uniq = (arr) => Array.from(new Set(arr));
+    const sort = (arr) => (arr || []).slice().sort((a,b)=>a.localeCompare(b, undefined, {numeric:true}));
+    const label = (code, desc) => `${norm(code)} - ${norm(desc)}`;
+    const codeFromLabel = (lab) => norm(lab).split(' - ')[0] || '';
+
+    // Prime Divisions
+    reset(divisionSelect,   'Select Division…');
+    reset(sectionSelect,    'Select Section…');
+    reset(subsectionSelect, 'Select Detailed Section…');
+    reset(itemSelect,       'Select Item…');
+
+    const divLabels = sort(uniq(rows.map(r => label(r['CSI Division Code'], r['CSI Division Description']))));
+    fill(divisionSelect, divLabels);
+
+    if (!window.__csiFlatWired) {
+      divisionSelect?.addEventListener('change', () => {
+        const divCode = codeFromLabel(divisionSelect.value);
+        reset(sectionSelect,    'Select Section…');
+        reset(subsectionSelect, 'Select Detailed Section…');
+        reset(itemSelect,       'Select Item…');
+        if (!divCode) return;
+        const secLabels = sort(uniq(
+          rows
+            .filter(r => norm(r['CSI Division Code']) === divCode)
+            .map(r => label(r['CSI Section Code'], r['CSI Section Description']))
+        ));
+        fill(sectionSelect, secLabels);
+      });
+
+      sectionSelect?.addEventListener('change', () => {
+        const divCode = codeFromLabel(divisionSelect.value);
+        const secCode = codeFromLabel(sectionSelect.value);
+        reset(subsectionSelect, 'Select Detailed Section…');
+        reset(itemSelect,       'Select Item…');
+        if (!divCode || !secCode) return;
+        const subLabels = sort(uniq(
+          rows
+            .filter(r => norm(r['CSI Division Code']) === divCode &&
+                         norm(r['CSI Section Code'])  === secCode)
+            .map(r => label(r['CSI Detailed Section Code'], r['CSI Detailed Section Description']))
+        ));
+        fill(subsectionSelect, subLabels);
+      });
+
+      subsectionSelect?.addEventListener('change', () => {
+        const divCode = codeFromLabel(divisionSelect.value);
+        const secCode = codeFromLabel(sectionSelect.value);
+        const subCode = codeFromLabel(subsectionSelect.value);
+        reset(itemSelect, 'Select Item…');
+        if (!divCode || !secCode || !subCode) return;
+        const itemLabels = sort(uniq(
+          rows
+            .filter(r => norm(r['CSI Division Code'])        === divCode &&
+                         norm(r['CSI Section Code'])         === secCode &&
+                         norm(r['CSI Detailed Section Code'])=== subCode)
+            .map(r => label(r['CSI Item Code'], r['CSI Item Description']))
+        ));
+        fill(itemSelect, itemLabels);
+      });
+
+      window.__csiFlatWired = true;
+    }
+  }
+
+  /* === 4) Loader: fetch → normalize → build tree → initialize UI === */
+  async function loadHierarchyFromSupabase() {
+     const USE_FLAT_CASCADES = true; 
+    try {
+      // Try the view (snake_case)
+      let { data, error } = await supa
+        .from(SUPABASE_TABLE)
+        .select(`
+          csi_division_code,
+          csi_division_description,
+          csi_section_code,
+          csi_section_description,
+          csi_detailed_section_code,
+          csi_detailed_section_description,
+          csi_item_code,
+          csi_item_description
+        `)
+        .limit(50000);
+
+      // Fallback to quoted base-table columns if the view/columns differ
+      if (error && error.code === '42703') {
+        const alt = await supa
+          .from(SUPABASE_TABLE)
+          .select(`
+            "CSI Division Code",
+            "CSI Division Description",
+            "CSI Section Code",
+            "CSI Section Description",
+            "CSI Detailed Section Code",
+            "CSI Detailed Section Description",
+            "CSI Item Code",
+            "CSI Item Description"
+          `)
+          .limit(50000);
+        if (alt.error) {
+          console.error('Supabase select (quoted) error:', alt.error);
+          alert('Failed to load hierarchy. Check the view/table and column names (see console).');
+          return;
+        }
+        data = alt.data;
+      } else if (error) {
+        console.error('Supabase select error:', error);
+        alert('Network/config error while loading from Supabase. See console for details.');
+        return;
+      }
+
+      const rows = (data || [])
+        .map(toExcelShape)
+        .filter(r =>
+          r['CSI Division Code']                && r['CSI Division Description'] &&
+          r['CSI Section Code']                 && r['CSI Section Description'] &&
+          r['CSI Detailed Section Code']        && r['CSI Detailed Section Description'] &&
+          r['CSI Item Code']                    && r['CSI Item Description']
+        );
+
+      if (!rows.length) {
+        alert('No valid rows found in Supabase (after normalization).');
+        return;
+      }
+
+      // Keep a flat copy for debugging and for the optional flat cascades
+      window.csiRows = rows;
+    
+      // Build the nested structure your existing UI expects
+      window.csiHierarchy = generateHierarchyTree(rows);
+
+      // Initialize the UI
+      if (USE_FLAT_CASCADES) {
+  wireFlatCascades(rows);           // primes Division and wires change events
+} else {
+  updateUIForCSIHierarchy();        // legacy object-tree approach
+}
+
+console.log('CSI Hierarchy loaded.', {
+  divisions: Object.keys(window.csiHierarchy || {}).length,
+  rows: rows.length
+      });
+    } catch (e) {
+      console.error('Unexpected Supabase load error:', e);
+      alert('Unexpected error while loading from Supabase (see console).');
+    }
+  }
+
+  /* === 5) Run once the DOM is ready === */
+  document.addEventListener('DOMContentLoaded', loadHierarchyFromSupabase);
+</script>
+<!-- ===== END: Supabase loader + robust cascades (drop-in) ===== -->
+
+</body>
+</html>
